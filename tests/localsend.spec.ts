@@ -1,8 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import { readFileSync } from "fs";
 import path from "path";
 
-test.describe.only("LocalSend.org", () => {
+test.describe("LocalSend.org", () => {
   test("should share a file", async ({ page, browser }) => {
     await page.goto("https://web.localsend.org/");
 
