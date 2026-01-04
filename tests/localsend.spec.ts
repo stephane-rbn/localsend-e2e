@@ -6,14 +6,11 @@ let senderPage: Page;
 let receiverPage: Page;
 
 async function uploadFile(page: Page, filePath: string) {
-  const recipientUserElement = page
-    .locator("div")
-    .filter({ hasText: /•/ })
-    .nth(5);
+  const receiverElement = page.locator("div").filter({ hasText: /•/ }).nth(5);
 
   const [fileChooser] = await Promise.all([
     page.waitForEvent("filechooser"),
-    recipientUserElement.click(),
+    receiverElement.click(),
   ]);
 
   await fileChooser.setFiles(filePath);
