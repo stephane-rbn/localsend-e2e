@@ -15,9 +15,9 @@ jobs:
           node-version: lts/*
       - name: Install dependencies
         run: npm ci
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-      - name: Run Playwright tests on Chromium
+      - name: Install Playwright Chromium browser only
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright tests on Chromium only
         run: npx playwright test --project="chromium"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
