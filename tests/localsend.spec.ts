@@ -2,40 +2,51 @@ import { expect, Page, test } from "@playwright/test";
 import { readFileSync } from "fs";
 import path from "path";
 
-test.describe("LocalSend.org", () => {
-  test("should share a file", async ({ page, browser }) => {
-    await page.goto("https://web.localsend.org/");
+let senderPage: Page;
+let receiverPage: Page;
 
-    const page2 = await browser.newPage();
-    await page2.goto("https://web.localsend.org/");
+async function uploadFile(page: Page, filePath: string) {
+  const recipientUserElement = page
+    .locator("div")
+    .filter({ hasText: /•/ })
+    .nth(5);
 
-    await page.bringToFront();
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    recipientUserElement.click(),
+  ]);
 
-    const recipientUserElement = page
-      .locator("div")
-      .filter({ hasText: /•/ })
-      .nth(5);
+  await fileChooser.setFiles(filePath);
+}
 
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      recipientUserElement.click(),
+async function expectDialog(page: Page, dialogTitle: string, timeout?: number) {
+  const dialog = page.getByRole("dialog").filter({ hasText: dialogTitle });
+
+  await expect(dialog).toBeVisible(timeout ? { timeout: timeout } : undefined);
+}
+
+test.describe("should send and receive a file between two users", () => {
+  test.beforeEach(async ({ page, browser }) => {
+    senderPage = page;
+    receiverPage = await browser.newPage();
+
+    await receiverPage.goto("https://web.localsend.org/");
+    await senderPage.goto("https://web.localsend.org/");
+  });
+
+  test("should upload a file", async () => {
+    await uploadFile(senderPage, path.resolve("demo.txt"));
+    await expectDialog(senderPage, "Sending files...");
+  });
+
+  test("should receive and verify a file", async () => {
+    await uploadFile(senderPage, path.resolve("demo.txt"));
+
+    const [download] = await Promise.all([
+      receiverPage.waitForEvent("download"),
     ]);
 
-    await fileChooser.setFiles(path.resolve("demo.txt"));
-
-    const sendingFilesDialog = page
-      .getByRole("dialog")
-      .filter({ hasText: "Sending files..." });
-
-    await expect(sendingFilesDialog).toBeVisible();
-
-    const downloadingFilesDialog = page2
-      .getByRole("dialog")
-      .filter({ hasText: "Receiving files" });
-
-    const [download] = await Promise.all([page2.waitForEvent("download")]);
-
-    await expect(downloadingFilesDialog).toBeVisible({ timeout: 60_000 });
+    await expectDialog(receiverPage, "Receiving files...", 60_000);
 
     const downloadPath = path.resolve("downloaded-demo.txt");
     await download.saveAs(downloadPath);
